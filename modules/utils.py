@@ -73,21 +73,30 @@ def natural_keys(text):
 
 
 def get_available_models():
+    ggufs: list[str] = get_available_ggufs()
+    llamacpp_HF = [Path(model).stem + "-HF" for model in ggufs]
+    
     model_list = []
-    for item in list(Path(f'{shared.args.model_dir}/').glob('*')):
-        if not item.name.endswith(('.txt', '-np', '.pt', '.json', '.yaml', '.py')) and 'llama-tokenizer' not in item.name:
-            model_list.append(item.name)
+    for dirpath, _, files in os.walk(Path(f'{shared.args.model_dir}/'), followlinks=True):
+        for file in files:
+            if not file.lower().endswith(('.txt', '-np', '.pt', '.json', '.yaml', '.py', '.gguf', ".md")) and 'llama-tokenizer' not in file.lower():
+                display_name = os.path.relpath(dirpath, Path(f'{shared.args.model_dir}/'))
+                if display_name not in model_list:
+                    if Path(display_name).stem in llamacpp_HF:
+                        ggufs.pop(llamacpp_HF.index(Path(display_name).stem))
+                    model_list.append(display_name)
 
-    return ['None'] + sorted(model_list, key=natural_keys)
+    return ['None'] + sorted(model_list + ggufs, key=natural_keys)
 
 
 def get_available_ggufs():
     model_list = []
-    for item in Path(f'{shared.args.model_dir}/').glob('*'):
-        if item.is_file() and item.name.lower().endswith(".gguf"):
-            model_list.append(item.name)
+    for dirpath, _, files in os.walk(Path(f'{shared.args.model_dir}/'), followlinks=True):
+        for file in files:
+            if file.lower().endswith(".gguf"):
+                model_list.append(os.path.relpath(Path(dirpath).joinpath(file), Path(f'{shared.args.model_dir}/')))
 
-    return ['None'] + sorted(model_list, key=natural_keys)
+    return sorted(model_list, key=natural_keys)
 
 
 def get_available_presets():
